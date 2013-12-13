@@ -1,8 +1,10 @@
 package raft
 
 import (
-	"sync"
-	"time"
+    "fmt"
+    "sync"
+    "time"
+    "net/http"
 )
 
 //------------------------------------------------------------------------------
@@ -174,7 +176,13 @@ func (p *Peer) sendAppendEntriesRequest(req *AppendEntriesRequest) {
 
 	resp := p.server.Transporter().SendAppendEntriesRequest(p.server, p, req)
 	if resp == nil {
-		debugln("peer.flush.timeout: ", p.server.Name(), "->", p.Name)
+	    //remove the node after a raft timeout
+	    client := &http.Client{}
+	    req, _ := http.NewRequest("DELETE", fmt.Sprintf("http://127.0.0.1:7001/remove/%s", p.Name), nil)
+	    resp, _ := client.Do(req)
+	    defer resp.Body.Close()
+
+	    debugln("peer.flush.timeout: ", p.server.Name(), "->", p.Name)
 		return
 	}
 	traceln("peer.flush.recv: ", p.Name)
